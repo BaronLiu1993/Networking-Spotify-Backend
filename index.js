@@ -4,6 +4,7 @@ import bodyParser from "body-parser"
 
 //Spotify Auth Routes
 import spotify from "./spotify/spotify.js"
+import profiles from "./processing/profiles.js"
 
 const app = express()
 const PORT = 7000
@@ -19,6 +20,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 app.use("/auth", spotify)
+
+app.use("/profile", profiles)
 
 app.listen(PORT, () => {
     console.log(`Listening on ${PORT}`)

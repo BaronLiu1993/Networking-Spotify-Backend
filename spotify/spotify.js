@@ -2,11 +2,11 @@ import express from "express";
 import dotenv from "dotenv";
 import { supabase } from "../supabase/supabase.js";
 import { v4 as uuidv4 } from "uuid";
-import crypto from "crypto"
+import crypto from "crypto";
 
 dotenv.config();
 const router = express.Router();
-const encryptionAlgorithm = 'aes-256-gcm'
+const encryptionAlgorithm = "aes-256-gcm";
 
 async function encryptToken(token) {
   return new Promise((resolve, reject) => {
@@ -44,11 +44,10 @@ async function decryptToken(encryptedData, token) {
   });
 }
 
-
 router.post("/login", async (req, res) => {});
 
 router.post("/register", async (req, res) => {
-  const { email, password, firstName, lastName } = req.body;
+  const { email, password, firstName, lastName, major, year } = req.body;
   try {
     const { error: registrationError } = await supabase.auth.signUp({
       email,
@@ -59,29 +58,42 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Failed to Register" });
     }
 
-    const { data: userData, error: insertionError } = await supabase
+    const { error: insertionError } = await supabase
       .from("users")
-      .insert({ email: email, first_name: firstName, last_name: lastName })
-      .select("id");
+      .insert({ email, firstName, lastName, major, year });
+
+    const { data: user, error: fetchError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .single();
 
     if (insertionError) {
       return res.status(400).json({ message: "Failed to Insert" });
     }
+
+    if (fetchError) {
+      return res.status(400).json({ message: "Failed to Fetch" });
+    }
+
+    console.log(user.id);
     res.redirect(
-      `https://f34d-166-48-48-44.ngrok-free.app/auth/oauth2/sync/${encodeURIComponent(userData.id)}`
+      `https://f34d-166-48-48-44.ngrok-free.app/auth/oauth2/sync/${encodeURIComponent(
+        user.id
+      )}`
     );
   } catch {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
-router.get("/oauth2/sync", (req, res) => {
-  const scope = [
-    "user-read-email user-read-private user-read-recently-played user-top-read",
-  ];
+router.get("/oauth2/sync/:id", (req, res) => {
+  const { id } = req.params;
+  const state = id;
+  const scope =
+    "user-read-email user-read-private user-read-recently-played user-top-read";
   const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
   const REDIRECT_URI = "https://f34d-166-48-48-44.ngrok-free.app/auth/callback";
-  const state = uuidv4();
   const authURL = `https://accounts.spotify.com/authorize?response_type=code&client_id=${CLIENT_ID}&scope=${encodeURIComponent(
     scope
   )}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${state}`;
@@ -89,6 +101,7 @@ router.get("/oauth2/sync", (req, res) => {
   res.redirect(authURL);
 });
 
+//Issue Token
 router.get("/callback", async (req, res) => {
   const { code, error, state } = req.query;
   const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
@@ -114,19 +127,74 @@ router.get("/callback", async (req, res) => {
       }),
     });
     const tokenData = await tokenRes.json();
-    console.log(tokenData)
     const { access_token, refresh_token } = tokenData;
     const { error: insertionError } = await supabase
       .from("users")
-      .update({ access_token:access_token, refresh_token: refresh_token})
-      .eq("user_id", state);
-
+      .update({ access_token: access_token, refresh_token: refresh_token })
+      .eq("id", state);
+    console.log(insertionError);
     if (insertionError) {
       return res.status(400).json({ message: "Failed to Insert" });
     }
-    res.redirect("http://localhost:3000/");
+    res.redirect("http://localhost:3000");
   } catch (err) {
     res.status(500).json({ message: "OAuth flow failed" });
+  }
+});
+
+router.get("/refresh-token/:id", async (req, res) => {
+  const { id } = req.params;
+  const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
+  const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
+
+  try {
+    const { data: userData, error: fetchError } = await supabase
+      .from("users")
+      .select("refresh_token")
+      .eq("id", id)
+      .single();
+    if (fetchError) {
+      return res.status(400).json({ message: "Failed to Fetch Token" });
+
+    }
+
+    const body = await fetch("https://accounts.spotify.com/api/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: userData.refresh_token,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET
+      }),
+    });
+
+    const response = await body.json();
+    console.log(response)
+    const { error: accessTokenInsertionError } = await supabase
+      .from("users")
+      .update({ access_token: response.access_token })
+      .eq("id", id);
+
+    if (accessTokenInsertionError) {
+      return res.status(400).json({ message: "Failed to Insert Access Token" });
+    }
+    if (response.refresh_token) {
+      const { error: refreshTokenInsertionError } = await supabase
+        .from("users")
+        .update({ refresh_token: response.refresh_token })
+        .eq("id", id);
+      if (refreshTokenInsertionError) {
+        return res.status(400).json({ message: "Failed to Insert Refresh" });
+      }
+    }
+
+    return res.status(200).json({ message: "Refreshed" });
+  } catch (err) {
+    console.log(err)
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 });
 

@@ -126,11 +126,25 @@ router.get("/callback", async (req, res) => {
         redirect_uri: REDIRECT_URI,
       }),
     });
+
     const tokenData = await tokenRes.json();
     const { access_token, refresh_token } = tokenData;
+
+    const rawUserIdData = await fetch("https://api.spotify.com/v1/me", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
+
+    const userIdData = await rawUserIdData.json();
     const { error: insertionError } = await supabase
       .from("users")
-      .update({ access_token: access_token, refresh_token: refresh_token })
+      .update({
+        access_token: access_token,
+        refresh_token: refresh_token,
+        spotifyId: userIdData.id,
+      })
       .eq("id", state);
     console.log(insertionError);
     if (insertionError) {
@@ -138,6 +152,7 @@ router.get("/callback", async (req, res) => {
     }
     res.redirect("http://localhost:3000");
   } catch (err) {
+    console.log(err)
     res.status(500).json({ message: "OAuth flow failed" });
   }
 });
@@ -155,7 +170,6 @@ router.get("/refresh-token/:id", async (req, res) => {
       .single();
     if (fetchError) {
       return res.status(400).json({ message: "Failed to Fetch Token" });
-
     }
 
     const body = await fetch("https://accounts.spotify.com/api/token", {
@@ -167,12 +181,12 @@ router.get("/refresh-token/:id", async (req, res) => {
         grant_type: "refresh_token",
         refresh_token: userData.refresh_token,
         client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET
+        client_secret: CLIENT_SECRET,
       }),
     });
 
     const response = await body.json();
-    console.log(response)
+    console.log(response);
     const { error: accessTokenInsertionError } = await supabase
       .from("users")
       .update({ access_token: response.access_token })
@@ -193,7 +207,7 @@ router.get("/refresh-token/:id", async (req, res) => {
 
     return res.status(200).json({ message: "Refreshed" });
   } catch (err) {
-    console.log(err)
+    console.log(err);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 });

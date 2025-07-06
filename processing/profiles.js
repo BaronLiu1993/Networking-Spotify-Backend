@@ -82,6 +82,7 @@ async function getSpotifyTopArtistsData(accessToken) {
       name: response[i].name,
       popularity: response[i].popularity,
       id: response[i].id,
+      image: response[i].images[0].url, //640 x 640
     };
     popularityScore = popularityScore + response[i].popularity;
     completeArtistsData.push(cleanedUserObject);
@@ -100,10 +101,10 @@ async function getSpotifyTopTracksData(accessToken) {
       },
     }
   );
-  console.log(userTracksData)
+  console.log(userTracksData);
   const rawResponse = await userTracksData.json();
   const response = rawResponse.items;
-  console.log(response)
+  console.log(response);
   let completeArtistList = [];
   let popularityScore = 0;
   for (let i = 0; i < response.length; i++) {
@@ -113,6 +114,7 @@ async function getSpotifyTopTracksData(accessToken) {
       url: response[i].external_urls.spotify,
       popularity: response[i].popularity,
       id: response[i].id,
+      image: response[i].album.images[0].url, // 640 x 640
     };
     popularityScore = popularityScore + response[i].popularity;
     completeArtistList.push(cleanedUserObject);
@@ -150,18 +152,37 @@ async function createSharedPlaylist(accessToken, spotifyUserId) {
 
 //Call This Twice for Both Users so They Mutually Follow Each Other Back
 async function followSpotifyUser(accessToken, userId1, userId2) {
-    const followSpotifyUserResponse = await fetch("", {
-        method: "PUT",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ids: [userId1, userId2]})
-    })
+  const followSpotifyUserResponse = await fetch("https://api.spotify.com/v1/me/following", {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ ids: [userId1, userId2] }),
+  });
 }
 
 router.post("/follow-user", async (req, res) => {
-
+  const { userId1, userId2 } = req.query;
+  try {
+    const accessToken1 = await getAccessToken(userId1);
+    const { data: spotifyData1, error: spotifyFetchErrorUserId1 } = await supabase
+      .from("users")
+      .select("spotifyId")
+      .eq("id", userId1)
+      .single();
+    const { data: spotifyData2, error: spotifyFetchErrorUserId2 } = await supabase
+      .from("users")
+      .select("spotifyId")
+      .eq("id", userId2)
+      .single();
+    const rawFollowResponse = followSpotifyUser(accessToken1, spotifyData1.spotifyId, spotifyData2.spotifyId);
+    return res.status(200).json({message: "Followed"})
+  } catch (err) {
+    console.log(err)
+    return res.status(500).json({message: err})
+  }
+  
 });
 
 //Combine Favourite Songs Into One Playlist
@@ -175,13 +196,16 @@ router.post("/create/shared-playlists/:userId1/:userId2", async (req, res) => {
   const spotifyUserId2 = getUserProfile(accessToken2);
 
   //Create Playlist here
-  const rawCreatePlaylistResponse = createSharedPlaylist(accessToken1, spotifyUserId1)
-  const createPlaylistResponse = await rawCreatePlaylistResponse
+  const rawCreatePlaylistResponse = createSharedPlaylist(
+    accessToken1,
+    spotifyUserId1
+  );
+  const createPlaylistResponse = await rawCreatePlaylistResponse;
   if (!createPlaylistResponse.success) {
-    return res.status(400).json({message: "Authorization Error"})
+    return res.status(400).json({ message: "Authorization Error" });
   }
 
-  res
+  res;
 });
 
 //Get Similarity
@@ -237,7 +261,7 @@ router.get("/analyse/:userId1/:userId2", async (req, res) => {
     };
     return res.status(200).json({ data });
   } catch (err) {
-    console.log(err)
+    console.log(err);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 });

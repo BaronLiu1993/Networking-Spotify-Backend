@@ -67,10 +67,14 @@ router.post("/follow", async (req, res) => {
 router.post("/create/shared-playlists", async (req, res) => {
   const { userId1, userId2 } = req.body;
   try {
-    const [accessToken1, accessToken2] = await Promise.all([
+    let [accessToken1, accessToken2] = await Promise.all([
       getAccessToken(userId1),
       getAccessToken(userId2),
     ]);
+
+    accessToken1 = decryptToken(accessToken1);
+    accessToken2 = decryptToken(accessToken2);
+
     // Get Spotify user profiles
     const spotifyUser1 = await getUserProfile(accessToken1); // Owner
     const spotifyUser2 = await getUserProfile(accessToken2); // Collaborator
@@ -154,6 +158,7 @@ router.post("/analyse", async (req, res) => {
       getAccessToken(userId1),
       getAccessToken(userId2),
     ]);
+
     accessToken1 = decryptToken(accessToken1);
     accessToken2 = decryptToken(accessToken2);
 
@@ -213,7 +218,9 @@ router.post("/analyse", async (req, res) => {
 router.get("/top-tracks", async (req, res) => {
   const { userId } = req.query;
   try {
-    const accessToken = getAccessToken(userId);
+    let accessToken = getAccessToken(userId);
+    accessToken = await accessToken;
+    accessToken = decryptToken(accessToken);
     const userTracksData = getSpotifyTopTracksData(accessToken);
     const data = await userTracksData;
     return res.status(200).json({ data });
@@ -227,8 +234,9 @@ router.get("/top-artists", async (req, res) => {
   const { userId } = req.query;
   try {
     const accessToken = getAccessToken(userId);
-    const processedAccessToken = await accessToken;
-    const userArtistData = getSpotifyTopArtistsData(processedAccessToken);
+    accessToken = await accessToken;
+    accessToken = decryptToken(accessToken);
+    const userArtistData = getSpotifyTopArtistsData(accessToken);
     const data = await userArtistData;
     return res.status(200).json({ data });
   } catch (err) {

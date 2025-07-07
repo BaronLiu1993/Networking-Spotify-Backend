@@ -1,8 +1,5 @@
 # 🎧 Spotify API
 
-A Spotify-powered social networking API that helps users **break the ice and build meaningful connections through music**. Designed with students in mind (especially for university campuses like UofT), the platform allows people to scan QR codes, view others' Spotify vibes, and even auto-generate collaborative playlists based on shared taste.
----
-
 ## 🌐 What This API Does
 
 This API handles:

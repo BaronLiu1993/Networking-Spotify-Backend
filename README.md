@@ -1,4 +1,4 @@
-# 🎧 Spotify API
+# 🎧 UofT Networking with Spotify API
 
 ## 🌐 What This API Does
 

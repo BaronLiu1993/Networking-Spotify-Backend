@@ -31,7 +31,8 @@ async function getUserProfile(accessToken) {
       Authorization: `Bearer ${accessToken}`,
     },
   });
-  return data.id;
+  const parsedData = await data.json();
+  return parsedData;
 }
 
 async function vectoriseProfileData(accessToken) {
@@ -101,11 +102,9 @@ async function getSpotifyTopTracksData(accessToken) {
       },
     }
   );
-  console.log(userTracksData);
   const rawResponse = await userTracksData.json();
   const response = rawResponse.items;
-  console.log(response);
-  let completeArtistList = [];
+  let completeTracksList = [];
   let popularityScore = 0;
   for (let i = 0; i < response.length; i++) {
     let cleanedUserObject = {
@@ -117,14 +116,16 @@ async function getSpotifyTopTracksData(accessToken) {
       image: response[i].album.images[0].url, // 640 x 640
     };
     popularityScore = popularityScore + response[i].popularity;
-    completeArtistList.push(cleanedUserObject);
+    completeTracksList.push(cleanedUserObject);
   }
 
   const averagedPopularityScore = popularityScore / 10;
-  return { completeArtistList, averagedPopularityScore };
+  return { completeTracksList, averagedPopularityScore };
 }
 
-async function createSharedPlaylist(accessToken, spotifyUserId) {
+//Get this to add to the create playlsit functionality
+async function createSharedPlaylist(accessToken, spotifyUserId, name1, name2) {
+  //generate using AI the description name and also add a profile pic from pinterest
   const createPlaylist = await fetch(
     `https://api.spotify.com/v1/users/${spotifyUserId}/playlists`,
     {
@@ -134,78 +135,173 @@ async function createSharedPlaylist(accessToken, spotifyUserId) {
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
-        name: "Test",
-        description: "New Playlist Description",
+        name: `${name1} + ${name2}'s Playlist`,
+        description: `🎉 ${name1} and ${name2} - a musical friendship is born!`,
         public: true,
         collaborative: true,
       }),
     }
   );
-  if (createPlaylist.ok) {
-    return { success: true };
-  }
-
-  return { success: false };
+  const playlistData = await createPlaylist.json();
+  return playlistData;
 }
 
 //Add Songs To It
 
 //Call This Twice for Both Users so They Mutually Follow Each Other Back
 async function followSpotifyUser(accessToken, userId1, userId2) {
-  const followSpotifyUserResponse = await fetch("https://api.spotify.com/v1/me/following", {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ ids: [userId1, userId2] }),
-  });
+  const response = await fetch(
+    `https://api.spotify.com/v1/me/following?type=user&ids=${
+      (userId1, userId2)
+    }`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+  return response;
 }
 
-router.post("/follow-user", async (req, res) => {
-  const { userId1, userId2 } = req.query;
+router.post("/follow", async (req, res) => {
+  const { userId1, userId2 } = req.body;
+
+  if (!userId1 || !userId2) {
+    return res
+      .status(400)
+      .json({ message: "Both userId1 and userId2 are required." });
+  }
+
   try {
     const accessToken1 = await getAccessToken(userId1);
-    const { data: spotifyData1, error: spotifyFetchErrorUserId1 } = await supabase
+    const { data: spotifyData1, error: error1 } = await supabase
       .from("users")
       .select("spotifyId")
       .eq("id", userId1)
       .single();
-    const { data: spotifyData2, error: spotifyFetchErrorUserId2 } = await supabase
+
+    const { data: spotifyData2, error: error2 } = await supabase
       .from("users")
       .select("spotifyId")
       .eq("id", userId2)
       .single();
-    const rawFollowResponse = followSpotifyUser(accessToken1, spotifyData1.spotifyId, spotifyData2.spotifyId);
-    return res.status(200).json({message: "Followed"})
+
+    if (error1 || !spotifyData1) {
+      return res
+        .status(400)
+        .json({ message: "Invalid userId1 or missing spotifyId." });
+    }
+
+    if (error2 || !spotifyData2) {
+      return res
+        .status(400)
+        .json({ message: "Invalid userId2 or missing spotifyId." });
+    }
+
+    await followSpotifyUser(
+      accessToken1,
+      spotifyData1.spotifyId,
+      spotifyData2.spotifyId
+    );
+
+    return res.status(200).json({ message: "Follow request sent to Spotify." });
   } catch (err) {
-    console.log(err)
-    return res.status(500).json({message: err})
+    return res.status(500).json({ message: "Internal Server Error" });
   }
-  
 });
 
+async function followPlaylist(accessToken, playlistId) {
+  const data = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/followers`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    }
+  })
+}
+
 //Combine Favourite Songs Into One Playlist
-router.post("/create/shared-playlists/:userId1/:userId2", async (req, res) => {
-  const { userId1, userId2 } = req.query;
-  const [accessToken1, accessToken2] = await Promise.all([
-    getAccessToken(userId1),
-    getAccessToken(userId2),
-  ]);
-  const spotifyUserId1 = getUserProfile(accessToken1);
-  const spotifyUserId2 = getUserProfile(accessToken2);
+router.post("/create/shared-playlists", async (req, res) => {
+  const { userId1, userId2 } = req.body;
+  try {
+    const [accessToken1, accessToken2] = await Promise.all([
+      getAccessToken(userId1),
+      getAccessToken(userId2),
+    ]);
+    // Get Spotify user profiles
+    const spotifyUser1 = await getUserProfile(accessToken1); // Owner
+    const spotifyUser2 = await getUserProfile(accessToken2); // Collaborator
 
-  //Create Playlist here
-  const rawCreatePlaylistResponse = createSharedPlaylist(
-    accessToken1,
-    spotifyUserId1
-  );
-  const createPlaylistResponse = await rawCreatePlaylistResponse;
-  if (!createPlaylistResponse.success) {
-    return res.status(400).json({ message: "Authorization Error" });
+    // Create playlist for the owner
+    const rawCreatePlaylistResponse = createSharedPlaylist(
+      accessToken1,
+      spotifyUser1.id,
+      spotifyUser1.display_name,
+      spotifyUser2.display_name
+    );
+
+    //Follow the Playlist 
+    const createPlaylistResponse = await rawCreatePlaylistResponse;
+    // Fetch top tracks for both users
+    await followPlaylist(accessToken2, createPlaylistResponse.id)
+
+    const [user1TracksData, user2TracksData] = await Promise.all([
+      fetch(
+        "https://api.spotify.com/v1/me/top/tracks?time_range=medium_term&limit=10",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken1}`,
+          },
+        }
+      ),
+      fetch(
+        "https://api.spotify.com/v1/me/top/tracks?time_range=medium_term&limit=10",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken2}`,
+          },
+        }
+      ),
+    ]);
+
+    const rawResponse1 = await user1TracksData.json();
+    const rawResponse2 = await user2TracksData.json();
+
+    const response1 = rawResponse1.items;
+    const response2 = rawResponse2.items;
+    let combinedTracks = [];
+
+    //Alternating
+    for (let i = 0; i < 10; i++) {
+      if (response1[i]) {
+        combinedTracks.push(response1[i].uri);
+      }
+      if (response2[i]) {
+        combinedTracks.push(response2[i].uri);
+      }
+    }
+
+    await fetch(
+      `https://api.spotify.com/v1/playlists/${createPlaylistResponse.id}/tracks/`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken1}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          uris: combinedTracks,
+        }),
+      }
+    );
+    return res
+      .status(200)
+      .json({ message: "Successfully Created and Added Top Tracks" });
+  } catch (err) {
+    return res.status(500).json({ message: err.message || err });
   }
-
-  res;
 });
 
 //Get Similarity
@@ -241,7 +337,7 @@ router.get("/analyse/:userId1/:userId2", async (req, res) => {
     );
 
     let data = {
-      similarityScore,
+      similarityScore: 1 - similarityScore,
       artistScore: {
         score1: spotifyArtistData1.averagedPopularityScore,
         score2: spotifyArtistData2.averagedPopularityScore,

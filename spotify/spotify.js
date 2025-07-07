@@ -91,7 +91,7 @@ router.get("/oauth2/sync/:id", (req, res) => {
   const { id } = req.params;
   const state = id;
   const scope =
-    "user-read-email user-read-private user-read-recently-played user-top-read";
+    "user-read-email user-read-private user-read-recently-played user-top-read playlist-modify-public playlist-modify-private ugc-image-upload user-follow-modify";
   const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
   const REDIRECT_URI = "https://f34d-166-48-48-44.ngrok-free.app/auth/callback";
   const authURL = `https://accounts.spotify.com/authorize?response_type=code&client_id=${CLIENT_ID}&scope=${encodeURIComponent(

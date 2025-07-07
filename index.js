@@ -17,13 +17,26 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 //Middleware
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://1061-166-48-48-44.ngrok-free.app"
+];
+
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
 
+/*app.set("trust proxy", true);
 //Rate Limiter
 const limiter = rateLimit({
   windowMs: 60 * 1000,
@@ -32,7 +45,7 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 
-app.use(limiter);
+app.use(limiter); */
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 

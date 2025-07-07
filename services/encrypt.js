@@ -1,16 +1,18 @@
 import crypto from "crypto";
-import dotenv from "dotenv"
+import dotenv from "dotenv";
 
-dotenv.config()
-const encryptionAlgorithm = process.env.encryptionAlgorithm;
-const salt = process.env.encryptionSalt; 
+dotenv.config();
+
+const encryptionAlgorithm = process.env.ENCRYPTION_ALGORITHM || "aes-256-gcm";
+const salt = process.env.ENCRYPTION_SALT;
+const secret = process.env.ENCRYPTION_SECRET;
 
 export async function encryptToken(token) {
   return new Promise((resolve, reject) => {
-    crypto.scrypt(token, salt, 32, (err, key) => {
+    crypto.scrypt(secret, salt, 32, (err, key) => {
       if (err) return reject(err);
 
-      const iv = crypto.randomBytes(12); 
+      const iv = crypto.randomBytes(12);
       const cipher = crypto.createCipheriv(encryptionAlgorithm, key, iv);
 
       let encrypted = cipher.update(token, "utf8", "hex");
@@ -19,29 +21,35 @@ export async function encryptToken(token) {
 
       const encryptedData = {
         iv: iv.toString("hex"),
-        encrypted,
         tag: authTag.toString("hex"),
+        encrypted,
       };
 
-      resolve(encryptedData);
+      const result = JSON.stringify(encryptedData);
+      resolve(result);
     });
   });
 }
 
-export async function decryptToken(encryptedData, token) {
+export async function decryptToken(encryptedString) {
+  let encryptedData;
+  encryptedData = JSON.parse(encryptedString);
+
   return new Promise((resolve, reject) => {
-    crypto.scrypt(token, salt, 32, (err, key) => {
-      if (err) return reject(err);
+    crypto.scrypt(secret, salt, 32, (err, key) => {
+      try {
+        const iv = Buffer.from(encryptedData.iv, "hex");
+        const tag = Buffer.from(encryptedData.tag, "hex");
 
-      const iv = Buffer.from(encryptedData.iv, "hex");
-      const tag = Buffer.from(encryptedData.tag, "hex");
-      const decipher = crypto.createDecipheriv(encryptionAlgorithm, key, iv);
-      decipher.setAuthTag(tag);
+        const decipher = crypto.createDecipheriv(encryptionAlgorithm, key, iv);
+        decipher.setAuthTag(tag);
 
-      let decrypted = decipher.update(encryptedData.encrypted, "hex", "utf8");
-      decrypted += decipher.final("utf8");
-
-      resolve(decrypted);
+        let decrypted = decipher.update(encryptedData.encrypted, "hex", "utf8");
+        decrypted += decipher.final("utf8");
+        resolve(decrypted);
+      } catch {
+        reject();
+      }
     });
   });
 }

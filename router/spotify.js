@@ -72,8 +72,8 @@ router.post("/create/shared-playlists", async (req, res) => {
       getAccessToken(userId2),
     ]);
 
-    accessToken1 = decryptToken(accessToken1);
-    accessToken2 = decryptToken(accessToken2);
+    accessToken1 = await decryptToken(accessToken1);
+    accessToken2 = await decryptToken(accessToken2);
 
     // Get Spotify user profiles
     const spotifyUser1 = await getUserProfile(accessToken1); // Owner
@@ -159,8 +159,8 @@ router.post("/analyse", async (req, res) => {
       getAccessToken(userId2),
     ]);
 
-    accessToken1 = decryptToken(accessToken1);
-    accessToken2 = decryptToken(accessToken2);
+    accessToken1 = await decryptToken(accessToken1);
+    accessToken2 = await decryptToken(accessToken2);
 
     const [
       spotifyArtistData1,
@@ -220,7 +220,7 @@ router.get("/top-tracks", async (req, res) => {
   try {
     let accessToken = getAccessToken(userId);
     accessToken = await accessToken;
-    accessToken = decryptToken(accessToken);
+    accessToken = await decryptToken(accessToken);
     const userTracksData = getSpotifyTopTracksData(accessToken);
     const data = await userTracksData;
     return res.status(200).json({ data });
@@ -235,7 +235,7 @@ router.get("/top-artists", async (req, res) => {
   try {
     const accessToken = getAccessToken(userId);
     accessToken = await accessToken;
-    accessToken = decryptToken(accessToken);
+    accessToken = await decryptToken(accessToken);
     const userArtistData = getSpotifyTopArtistsData(accessToken);
     const data = await userArtistData;
     return res.status(200).json({ data });

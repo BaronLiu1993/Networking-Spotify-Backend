@@ -66,20 +66,17 @@ router.get("/oauth2/sync/:id", (req, res) => {
 //Issue Token
 router.get("/callback", async (req, res) => {
     const { code, error, state } = req.query;
-    console.log("🔁 OAuth callback triggered");
-    console.log("👉 Query Params:", { code, error, state });
+
   
     const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
     const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
     const REDIRECT_URI = "https://1061-166-48-48-44.ngrok-free.app/auth/callback";
   
     if (error) {
-      console.log("❌ Authorization failed:", error);
       return res.status(400).json({ message: "Authorization failed" });
     }
   
     try {
-      console.log("🎫 Requesting access & refresh tokens from Spotify...");
       const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
         headers: {
@@ -100,7 +97,6 @@ router.get("/callback", async (req, res) => {
   
       const { access_token, refresh_token } = tokenData;
       if (!access_token || !refresh_token) {
-        console.log("❌ Missing tokens in Spotify response.");
         return res.status(400).json({ message: "Failed to retrieve tokens" });
       }
   
@@ -113,9 +109,7 @@ router.get("/callback", async (req, res) => {
       });
   
       const userIdData = await rawUserIdData.json();
-      console.log("✅ Spotify user profile:", userIdData);
   
-      console.log("📦 Updating Supabase user with Spotify data...");
       const { error: insertionError } = await supabase
         .from("users")
         .update({
@@ -130,10 +124,8 @@ router.get("/callback", async (req, res) => {
         return res.status(400).json({ message: "Failed to Insert" });
       }
   
-      console.log("✅ Successfully linked Spotify. Redirecting...");
       res.redirect("http://localhost:3000");
     } catch (err) {
-      console.log("❌ OAuth flow failed:", err);
       res.status(500).json({ message: "OAuth flow failed" });
     }
   });

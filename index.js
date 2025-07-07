@@ -1,28 +1,46 @@
-import express from "express"
-import cors from "cors"
-import bodyParser from "body-parser"
+//Middleware and Express Imports
+import express from "express";
+import cors from "cors";
+import bodyParser from "body-parser";
+import dotenv from "dotenv";
+import rateLimit from "express-rate-limit";
 
 //Spotify Auth Routes
-import spotify from "./spotify/spotify.js"
-import profiles from "./processing/profiles.js"
+import auth from "./router/auth.js";
+import spotify from "./router/spotify.js";
 
-const app = express()
-const PORT = 7000
+//Read Env File
+dotenv.config();
+
+//Configure Express
+const app = express();
+const PORT = process.env.PORT || 8080;
 
 //Middleware
 app.use(
-    cors({
-      origin: "http://localhost:3000",
-      credentials: true,
-    })
-  );
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
+
+//Rate Limiter
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(limiter);
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-app.use("/auth", spotify)
+//Endpoints
+app.use("/auth", auth);
+app.use("/profile", spotify);
 
-app.use("/profile", profiles)
-
+//Start Server
 app.listen(PORT, () => {
-    console.log(`Listening on ${PORT}`)
-})
+  console.log("Server Is On");
+});

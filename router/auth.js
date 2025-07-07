@@ -1,50 +1,15 @@
 import express from "express";
 import dotenv from "dotenv";
 import { supabase } from "../supabase/supabase.js";
-import { v4 as uuidv4 } from "uuid";
-import crypto from "crypto";
+
+//Encryption and Decryption
+import { encryptToken, decryptToken } from "../services/encrypt.js";
 
 dotenv.config();
 const router = express.Router();
-const encryptionAlgorithm = "aes-256-gcm";
-
-async function encryptToken(token) {
-  return new Promise((resolve, reject) => {
-    crypto.scrypt(token, salt, 24, (err, key) => {
-      if (err) return reject(err);
-
-      const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipheriv(encryptionAlgorithm, key, iv);
-
-      let encrypted = cipher.update(token, "utf8", "hex");
-      encrypted += cipher.final("hex");
-
-      const encryptedData = {
-        iv: iv.toString("hex"),
-        encrypted,
-      };
-      resolve(encryptedData);
-    });
-  });
-}
-
-async function decryptToken(encryptedData, token) {
-  return new Promise((resolve, reject) => {
-    crypto.scrypt(token, salt, 24, (err, key) => {
-      if (err) return reject(err);
-
-      const iv = Buffer.from(encryptedData.iv, "hex");
-      const decipher = crypto.createDecipheriv(encryptionAlgorithm, key, iv);
-
-      let decrypted = decipher.update(encryptedData.encrypted, "hex", "utf8");
-      decrypted += decipher.final("utf8");
-
-      resolve(decrypted);
-    });
-  });
-}
-
-router.post("/login", async (req, res) => {});
+router.post("/login", async (req, res) => {
+    
+});
 
 router.post("/register", async (req, res) => {
   const { email, password, firstName, lastName, major, year } = req.body;
@@ -141,18 +106,17 @@ router.get("/callback", async (req, res) => {
     const { error: insertionError } = await supabase
       .from("users")
       .update({
-        access_token: access_token,
-        refresh_token: refresh_token,
+        access_token: encryptToken(access_token),
+        refresh_token: encryptToken(refresh_token),
         spotifyId: userIdData.id,
       })
       .eq("id", state);
-    console.log(insertionError);
     if (insertionError) {
       return res.status(400).json({ message: "Failed to Insert" });
     }
     res.redirect("http://localhost:3000");
   } catch (err) {
-    console.log(err)
+    console.log(err);
     res.status(500).json({ message: "OAuth flow failed" });
   }
 });
@@ -161,13 +125,14 @@ router.get("/refresh-token/:id", async (req, res) => {
   const { id } = req.params;
   const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
   const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
-
+  
   try {
     const { data: userData, error: fetchError } = await supabase
       .from("users")
       .select("refresh_token")
       .eq("id", id)
       .single();
+    
     if (fetchError) {
       return res.status(400).json({ message: "Failed to Fetch Token" });
     }
@@ -179,17 +144,16 @@ router.get("/refresh-token/:id", async (req, res) => {
       },
       body: new URLSearchParams({
         grant_type: "refresh_token",
-        refresh_token: userData.refresh_token,
+        refresh_token: decryptToken(userData.refresh_token),
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET,
       }),
     });
 
     const response = await body.json();
-    console.log(response);
     const { error: accessTokenInsertionError } = await supabase
       .from("users")
-      .update({ access_token: response.access_token })
+      .update({ access_token: encryptToken(response.access_token) })
       .eq("id", id);
 
     if (accessTokenInsertionError) {
@@ -198,7 +162,7 @@ router.get("/refresh-token/:id", async (req, res) => {
     if (response.refresh_token) {
       const { error: refreshTokenInsertionError } = await supabase
         .from("users")
-        .update({ refresh_token: response.refresh_token })
+        .update({ refresh_token: encryptToken(response.refresh_token) })
         .eq("id", id);
       if (refreshTokenInsertionError) {
         return res.status(400).json({ message: "Failed to Insert Refresh" });
@@ -208,6 +172,22 @@ router.get("/refresh-token/:id", async (req, res) => {
     return res.status(200).json({ message: "Refreshed" });
   } catch (err) {
     console.log(err);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+router.get("/get-user-data", async (req, res) => {
+  const { id } = req.query;
+  try {
+    const { data: userData, error: userDataError } = await supabase
+      .from("users")
+      .select("major, year, lastName, firstName")
+      .eq("id", id);
+    if (userDataError) {
+      return res.status(400).json({ message: "Failed to Authorize" });
+    }
+    return res.status(200).json({ data: userData });
+  } catch {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 });

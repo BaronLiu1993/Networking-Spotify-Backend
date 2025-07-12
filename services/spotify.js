@@ -92,7 +92,6 @@ export async function getSpotifyTopArtistsData(accessToken) {
     }
   );
   const rawResponse = await userArtistsData.json();
-  console.log(rawResponse);
 
   const response = rawResponse.items;
   let completeArtistsData = [];
@@ -110,7 +109,6 @@ export async function getSpotifyTopArtistsData(accessToken) {
     popularityScore = popularityScore + response[i].popularity;
     completeArtistsData.push(cleanedUserObject);
   }
-  console.log(completeArtistsData);
   const averagedPopularityScore = popularityScore / 10;
   return { completeArtistsData, averagedPopularityScore };
 }
@@ -158,7 +156,6 @@ export async function getSpotifyTopTracksData(accessToken) {
   }
 
   const averagedPopularityScore = popularityScore / 10;
-  console.log(completeTracksList);
 
   return { completeTracksList, averagedPopularityScore };
 }

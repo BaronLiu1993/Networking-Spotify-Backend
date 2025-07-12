@@ -29,7 +29,7 @@ router.post("/get-scan", async (req, res) => {
     const response = await getRedirectData(messageId, ownerId);
     if (!response.success) {
       return res
-        .status(400)
+        .status(200)
         .json({ message: "No Scanned Data Found", success: false });
     }
     return res
@@ -42,6 +42,10 @@ router.post("/get-scan", async (req, res) => {
 
 router.post("/post-scan", async (req, res) => {
   const { ownerId, scannerId, messageId } = req.body;
+  console.log("Hit Endpoint")
+  console.log(ownerId)
+  console.log(scannerId)
+  console.log(scannerId)
   try {
     const response = await scanQRCode(ownerId, scannerId, messageId);
     if (!response.success) {

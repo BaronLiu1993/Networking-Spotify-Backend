@@ -13,18 +13,18 @@ const router = express.Router();
 
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
-  console.log(email)
+  console.log(email);
   try {
     const { data: loginData, error: loginError } =
       await supabase.auth.signInWithPassword({
         email,
         password,
       });
-    console.log(loginError)
+    console.log(loginError);
     if (loginError) {
       return res.status(400).json({ message: "Failed to Login" });
     }
-    console.log(loginData)
+    console.log(loginData);
     return res.status(200).json({
       access_token: loginData.session.access_token,
       refresh_token: loginData.session.refresh_token,
@@ -224,12 +224,33 @@ router.get("/get-user-data", verifyToken, async (req, res) => {
   try {
     const { data: userData, error: userDataError } = await supabase
       .from("users")
-      .select("major, year, lastName, firstName")
+      .select("major, year, interests, lastName, firstName")
       .eq("id", userId);
     if (userDataError) {
       return res.status(400).json({ message: "Failed to Authorize" });
     }
     return res.status(200).json({ data: userData });
+  } catch {
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+router.get("/get-user", async (req, res) => {
+  const { userId1, userId2 } = req.query;
+  try {
+    const { data: userData1, error: userDataError1 } = await supabase
+      .from("users")
+      .select("major, year, interests, lastName, firstName")
+      .eq("id", userId1);
+    const { data: userData2, error: userDataError2 } = await supabase
+      .from("users")
+      .select("major, year, interests, lastName, firstName")
+      .eq("id", userId2);
+
+    if (userDataError1 || userDataError2) {
+      return res.status(400).json({ message: "Failed to Authorize" });
+    }
+    return res.status(200).json({ data: { userData1, userData2 } });
   } catch {
     return res.status(500).json({ message: "Internal Server Error" });
   }

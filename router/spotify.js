@@ -11,11 +11,47 @@ import {
   getSpotifyTopArtistsData,
   createSharedPlaylist,
   followSpotifyUser,
+  getRedirectData,
+  scanQRCode,
 } from "../services/spotify.js";
 import { decryptToken } from "../services/encrypt.js";
+import { supabase } from "../supabase/supabase.js";
 
 dotenv.config();
 const router = express.Router();
+
+//get endpoint for expiration of it as well
+
+//Channel Event Handler That Will Then Send Data Over to User
+router.post("/get-scan", async (req, res) => {
+  const { messageId, ownerId } = req.body;
+  try {
+    const response = await getRedirectData(messageId, ownerId);
+    if (!response.success) {
+      return res
+        .status(400)
+        .json({ message: "No Scanned Data Found", success: false });
+    }
+    return res
+      .status(200)
+      .json({ message: response.userData.scannerId, success: true });
+  } catch {
+    return res.status(500).json({ message: "Failed", success: false });
+  }
+});
+
+router.post("/post-scan", async (req, res) => {
+  const { ownerId, scannerId, messageId } = req.body;
+  try {
+    const response = await scanQRCode(ownerId, scannerId, messageId);
+    if (!response.success) {
+      return res.status(400).json({ message: "No Scan", success: false });
+    }
+    return res.status(200).json({ message: response, success: true });
+  } catch {
+    return res.status(500).json({ message: "Failed", success: false });
+  }
+});
 
 router.post("/follow", async (req, res) => {
   const { userId1, userId2 } = req.body;
@@ -153,6 +189,7 @@ router.post("/create/shared-playlists", async (req, res) => {
 router.post("/analyse", async (req, res) => {
   const { userId1, userId2 } = req.body;
   //Get Score
+
   try {
     let [accessToken1, accessToken2] = await Promise.all([
       getAccessToken(userId1),
@@ -167,12 +204,19 @@ router.post("/analyse", async (req, res) => {
       spotifyArtistData2,
       spotifyTrackData1,
       spotifyTrackData2,
+      userData1,
+      userData2,
     ] = await Promise.all([
       getSpotifyTopArtistsData(accessToken1),
       getSpotifyTopArtistsData(accessToken2),
       getSpotifyTopTracksData(accessToken1),
       getSpotifyTopTracksData(accessToken2),
+      getUserProfile(accessToken1),
+      getUserProfile(accessToken2),
     ]);
+
+    console.log(userData1);
+    console.log(userData2);
 
     const [spotifyVector1, spotifyVector2] = await Promise.all([
       vectoriseProfileData(accessToken1),
@@ -186,6 +230,18 @@ router.post("/analyse", async (req, res) => {
 
     let data = {
       similarityScore: 1 - similarityScore,
+      userData: {
+        user1: {
+          name: userData1.display_name,
+          uri: userData1.uri,
+          image: userData1?.images[0]?.url,
+        },
+        user2: {
+          name: userData2.display_name,
+          uri: userData2.uri,
+          image: userData2?.images[0]?.url,
+        },
+      },
       favouriteGenres: {
         genre1: spotifyVector1.genres,
         genre2: spotifyVector2.genres,
@@ -199,8 +255,8 @@ router.post("/analyse", async (req, res) => {
         score2: spotifyTrackData2.averagedPopularityScore,
       },
       tracks: {
-        spotifyTrackData1: spotifyTrackData1.completeArtistList,
-        spotifyTrackData2: spotifyTrackData2.completeArtistList,
+        spotifyTrackData1: spotifyTrackData1.completeTracksList,
+        spotifyTrackData2: spotifyTrackData2.completeTracksList,
       },
       artists: {
         spotifyArtistData1: spotifyArtistData1.completeArtistsData,
@@ -210,7 +266,29 @@ router.post("/analyse", async (req, res) => {
     return res.status(200).json({ data });
   } catch (err) {
     console.log(err);
-    return res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: err });
+  }
+});
+
+router.get("/getUserSpotifyProfile", async (req, res) => {
+  const { userId } = req.query;
+
+  try {
+    let accessToken = await getAccessToken(userId);
+    accessToken = await decryptToken(accessToken);
+
+    const userData = await getUserProfile(accessToken);
+
+    const spotifyProfile = {
+      name: userData.display_name,
+      uri: userData.uri,
+      image: userData?.images?.[0]?.url || null,
+    };
+
+    return res.status(200).json({ spotifyProfile });
+  } catch (err) {
+    console.error("Error fetching user Spotify profile:", err);
+    return res.status(500).json({ message: "Failed to fetch Spotify profile" });
   }
 });
 

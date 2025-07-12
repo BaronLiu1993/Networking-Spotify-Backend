@@ -10,8 +10,30 @@ const openai = new OpenAI({
   apiKey: OPENAI_KEY,
 });
 
-//Helper Functions
+export async function scanQRCode(ownerId, scannerId, messageId) {
+  const { error: insertionError } = await supabase.from("qr_scans").insert({
+    ownerId,
+    scannerId,
+    messageId,
+  });
+  if (!insertionError) {
+    return { message: "Failed", success: true };
+  }
+  return { message: "Success", success: true };
+}
 
+export async function getRedirectData(messageId) {
+  const { data: userData, error: fetchError } = await supabase
+    .from("qr_scans")
+    .select("ownerId, scannerId")
+    .eq("messageId", messageId)
+    .single();
+  if (fetchError) {
+    return { message: "Failed to Fetch", success: false };
+  }
+  return { message: userData, success: true };
+}
+//Helper Functions
 export async function getAccessToken(userId) {
   const { data: accessTokenData } = await supabase
     .from("users")
@@ -70,6 +92,8 @@ export async function getSpotifyTopArtistsData(accessToken) {
     }
   );
   const rawResponse = await userArtistsData.json();
+  console.log(rawResponse);
+
   const response = rawResponse.items;
   let completeArtistsData = [];
   let popularityScore = 0;
@@ -81,13 +105,25 @@ export async function getSpotifyTopArtistsData(accessToken) {
       popularity: response[i].popularity,
       id: response[i].id,
       image: response[i].images[0].url, //640 x 640
+      uri: response[i].uri,
     };
     popularityScore = popularityScore + response[i].popularity;
     completeArtistsData.push(cleanedUserObject);
   }
-
+  console.log(completeArtistsData);
   const averagedPopularityScore = popularityScore / 10;
   return { completeArtistsData, averagedPopularityScore };
+}
+
+export async function getSpotifyUserData(accessToken) {
+  const userData = await fetch("https://api.spotify.com/v1/me", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+  const userDataJSON = await userData.json();
+  return userDataJSON;
 }
 
 export async function getSpotifyTopTracksData(accessToken) {
@@ -99,29 +135,41 @@ export async function getSpotifyTopTracksData(accessToken) {
       },
     }
   );
+
   const rawResponse = await userTracksData.json();
+
   const response = rawResponse.items;
+
   let completeTracksList = [];
   let popularityScore = 0;
   for (let i = 0; i < response.length; i++) {
-    let cleanedUserObject = {
-      artist: response[i].album.artists[0].name,
-      name: response[i].name,
-      url: response[i].external_urls.spotify,
-      popularity: response[i].popularity,
-      id: response[i].id,
-      image: response[i].album.images[0].url, // 640 x 640
+    const track = response[i];
+    let cleanedTrackObject = {
+      artist: track.album.artists[0].name,
+      name: track.name,
+      uri: track.uri,
+      popularity: track.popularity,
+      id: track.id,
+      image: track.album.images[0].url, // 640 x 640
     };
-    popularityScore = popularityScore + response[i].popularity;
-    completeTracksList.push(cleanedUserObject);
+
+    popularityScore += track.popularity;
+    completeTracksList.push(cleanedTrackObject);
   }
 
   const averagedPopularityScore = popularityScore / 10;
+  console.log(completeTracksList);
+
   return { completeTracksList, averagedPopularityScore };
 }
 
 //Get this to add to the create playlsit functionality
-export async function createSharedPlaylist(accessToken, spotifyUserId, name1, name2) {
+export async function createSharedPlaylist(
+  accessToken,
+  spotifyUserId,
+  name1,
+  name2
+) {
   //generate using AI the description name and also add a profile pic from pinterest
   const createPlaylist = await fetch(
     `https://api.spotify.com/v1/users/${spotifyUserId}/playlists`,

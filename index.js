@@ -19,7 +19,6 @@ const PORT = process.env.PORT || 8080;
 //Middleware
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://indie-b-sides-frontend.vercel.app/",
   "https://18158ab10499.ngrok-free.app",
 ];
 

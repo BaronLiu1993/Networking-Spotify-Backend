@@ -28,10 +28,12 @@ export async function getRedirectData(messageId) {
     .select("ownerId, scannerId")
     .eq("messageId", messageId)
     .single();
+  console.log(fetchError)
+  console.log(userData)
   if (fetchError) {
     return { message: "Failed to Fetch", success: false };
   }
-  return { message: userData, success: true };
+  return { userData, success: true };
 }
 //Helper Functions
 export async function getAccessToken(userId) {

@@ -175,7 +175,6 @@ router.get("/refresh-token/:id", async (req, res) => {
       .eq("id", id)
       .single();
 
-    console.log(userData.refresh_token);
     if (fetchError) {
       return res.status(400).json({ message: "Failed to Fetch Token" });
     }
@@ -194,6 +193,7 @@ router.get("/refresh-token/:id", async (req, res) => {
     });
 
     const response = await body.json();
+    console.log(response)
     const { error: accessTokenInsertionError } = await supabase
       .from("users")
       .update({ access_token: await encryptToken(response.access_token) })

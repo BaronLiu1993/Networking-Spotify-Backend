@@ -57,7 +57,7 @@ router.post("/register", async (req, res) => {
     if (registrationError) {
       return res.status(400).json({ message: "Failed to Register" });
     }
-
+    console.log(registrationData)
     const { error: insertionError } = await supabase.from("users").insert({
       id: registrationData.user.id,
       email,
@@ -75,7 +75,7 @@ router.post("/register", async (req, res) => {
     }
 
     return res.status(200).json({
-      url: `https://25423d2f6236.ngrok-free.app/auth/oauth2/sync/${encodeURIComponent(
+      url: `https://network-spotify-backend.onrender.com/auth/oauth2/sync/${encodeURIComponent(
         registrationData.user.id
       )}`,
     });
@@ -91,7 +91,7 @@ router.get("/oauth2/sync/:id", (req, res) => {
   const scope =
     "user-read-email user-read-private user-read-recently-played user-top-read playlist-modify-public playlist-modify-private ugc-image-upload user-follow-modify";
   const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
-  const REDIRECT_URI = "https://25423d2f6236.ngrok-free.app/auth/callback";
+  const REDIRECT_URI = "https://network-spotify-backend.onrender.com/auth/callback";
   const authURL = `https://accounts.spotify.com/authorize?response_type=code&client_id=${CLIENT_ID}&scope=${encodeURIComponent(
     scope
   )}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${state}`;
@@ -105,7 +105,7 @@ router.get("/callback", async (req, res) => {
 
   const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
   const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
-  const REDIRECT_URI = "https://25423d2f6236.ngrok-free.app/auth/callback";
+  const REDIRECT_URI = "https://network-spotify-backend.onrender.com/auth/callback";
 
   if (error) {
     return res.status(400).json({ message: "Authorization failed" });
@@ -173,7 +173,7 @@ router.get("/refresh-token/:id", async (req, res) => {
       .select("refresh_token")
       .eq("id", id)
       .single();
-
+    console.log(fetchError)
     if (fetchError) {
       return res.status(400).json({ message: "Failed to Fetch Token" });
     }

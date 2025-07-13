@@ -75,7 +75,7 @@ router.post("/register", async (req, res) => {
     }
 
     return res.status(200).json({
-      url: `https://18158ab10499.ngrok-free.app/auth/oauth2/sync/${encodeURIComponent(
+      url: `https://25423d2f6236.ngrok-free.app/auth/oauth2/sync/${encodeURIComponent(
         registrationData.user.id
       )}`,
     });
@@ -91,7 +91,7 @@ router.get("/oauth2/sync/:id", (req, res) => {
   const scope =
     "user-read-email user-read-private user-read-recently-played user-top-read playlist-modify-public playlist-modify-private ugc-image-upload user-follow-modify";
   const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
-  const REDIRECT_URI = "https://18158ab10499.ngrok-free.app/auth/callback";
+  const REDIRECT_URI = "https://25423d2f6236.ngrok-free.app/auth/callback";
   const authURL = `https://accounts.spotify.com/authorize?response_type=code&client_id=${CLIENT_ID}&scope=${encodeURIComponent(
     scope
   )}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${state}`;
@@ -105,7 +105,7 @@ router.get("/callback", async (req, res) => {
 
   const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
   const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
-  const REDIRECT_URI = "https://18158ab10499.ngrok-free.app/auth/callback";
+  const REDIRECT_URI = "https://25423d2f6236.ngrok-free.app/auth/callback";
 
   if (error) {
     return res.status(400).json({ message: "Authorization failed" });
@@ -153,7 +153,6 @@ router.get("/callback", async (req, res) => {
       .eq("id", state);
 
     if (insertionError) {
-      console.log("❌ Failed to update user in Supabase:", insertionError);
       return res.status(400).json({ message: "Failed to Insert" });
     }
 

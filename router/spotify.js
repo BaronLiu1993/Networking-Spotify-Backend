@@ -25,32 +25,24 @@ const router = express.Router();
 //Channel Event Handler That Will Then Send Data Over to User
 router.post("/get-scan", async (req, res) => {
   const { messageId, ownerId } = req.body;
-  console.log(messageId)
-  console.log(ownerId)
   try {
     const response = await getRedirectData(messageId, ownerId);
-    console.log(response)
+    console.log(response);
 
     if (!response.success) {
       return res
         .status(200)
         .json({ message: "No Scanned Data Found", success: false });
     }
-    return res
-      .status(200)
-      .json({ message: response.userData, success: true });
+
+    return res.status(200).json({ message: response.userData, success: true });
   } catch (err) {
-    console.log(err)
     return res.status(500).json({ message: "Failed", success: false });
   }
 });
 
 router.post("/post-scan", async (req, res) => {
   const { ownerId, scannerId, messageId } = req.body;
-  console.log("Hit Endpoint")
-  console.log(ownerId)
-  console.log(scannerId)
-  console.log(scannerId)
   try {
     const response = await scanQRCode(ownerId, scannerId, messageId);
     if (!response.success) {

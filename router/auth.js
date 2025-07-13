@@ -13,25 +13,21 @@ const router = express.Router();
 
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
-  console.log(email);
   try {
     const { data: loginData, error: loginError } =
       await supabase.auth.signInWithPassword({
         email,
         password,
       });
-    console.log(loginError);
     if (loginError) {
       return res.status(400).json({ message: "Failed to Login" });
     }
-    console.log(loginData);
     return res.status(200).json({
       access_token: loginData.session.access_token,
       refresh_token: loginData.session.refresh_token,
       userId: loginData.user.id,
     });
   } catch (err) {
-    console.log(err);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 });
@@ -57,7 +53,6 @@ router.post("/register", async (req, res) => {
     if (registrationError) {
       return res.status(400).json({ message: "Failed to Register" });
     }
-    console.log(registrationData)
     const { error: insertionError } = await supabase.from("users").insert({
       id: registrationData.user.id,
       email,
@@ -69,7 +64,6 @@ router.post("/register", async (req, res) => {
       interests,
     });
 
-    console.log(insertionError);
     if (insertionError) {
       return res.status(400).json({ message: "Failed to Insert" });
     }
@@ -79,8 +73,7 @@ router.post("/register", async (req, res) => {
         registrationData.user.id
       )}`,
     });
-  } catch (err) {
-    console.log(err);
+  } catch {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 });
@@ -166,14 +159,12 @@ router.get("/refresh-token/:id", async (req, res) => {
   const { id } = req.params;
   const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
   const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
-  console.log(id);
   try {
     const { data: userData, error: fetchError } = await supabase
       .from("users")
       .select("refresh_token")
       .eq("id", id)
       .single();
-    console.log(fetchError)
     if (fetchError) {
       return res.status(400).json({ message: "Failed to Fetch Token" });
     }
@@ -192,7 +183,6 @@ router.get("/refresh-token/:id", async (req, res) => {
     });
 
     const response = await body.json();
-    console.log(response)
     const { error: accessTokenInsertionError } = await supabase
       .from("users")
       .update({ access_token: await encryptToken(response.access_token) })
@@ -213,7 +203,6 @@ router.get("/refresh-token/:id", async (req, res) => {
 
     return res.status(200).json({ message: "Refreshed" });
   } catch (err) {
-    console.log(err);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 });
@@ -226,11 +215,11 @@ router.get("/get-user-data", verifyToken, async (req, res) => {
       .select("major, year, interests, lastName, firstName")
       .eq("id", userId);
     if (userDataError) {
-      return res.status(400).json({ message: "Failed to Authorize" });
+      return res.status(400).json({ message: "Failed to Authorize", success: false });
     }
-    return res.status(200).json({ data: userData });
+    return res.status(200).json({ data: userData, success: true });
   } catch {
-    return res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: "Internal Server Error", success: true });
   }
 });
 

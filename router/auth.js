@@ -155,19 +155,11 @@ router.get("/callback", async (req, res) => {
   }
 });
 
-router.get("/refresh-token/:id", async (req, res) => {
-  const { id } = req.params;
+router.get("/refresh-token/:id/:refreshToken", async (req, res) => {
+  const { id, refreshToken } = req.params;
   const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
   const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
   try {
-    const { data: userData, error: fetchError } = await supabase
-      .from("users")
-      .select("refresh_token")
-      .eq("id", id)
-      .single();
-    if (fetchError) {
-      return res.status(400).json({ message: "Failed to Fetch Token" });
-    }
 
     const body = await fetch("https://accounts.spotify.com/api/token", {
       method: "POST",
@@ -176,7 +168,7 @@ router.get("/refresh-token/:id", async (req, res) => {
       },
       body: new URLSearchParams({
         grant_type: "refresh_token",
-        refresh_token: await decryptToken(userData.refresh_token),
+        refresh_token: refreshToken,
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET,
       }),

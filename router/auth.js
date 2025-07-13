@@ -84,7 +84,8 @@ router.get("/oauth2/sync/:id", (req, res) => {
   const scope =
     "user-read-email user-read-private user-read-recently-played user-top-read playlist-modify-public playlist-modify-private ugc-image-upload user-follow-modify";
   const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
-  const REDIRECT_URI = "https://network-spotify-backend.onrender.com/auth/callback";
+  const REDIRECT_URI =
+    "https://network-spotify-backend.onrender.com/auth/callback";
   const authURL = `https://accounts.spotify.com/authorize?response_type=code&client_id=${CLIENT_ID}&scope=${encodeURIComponent(
     scope
   )}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${state}`;
@@ -98,7 +99,8 @@ router.get("/callback", async (req, res) => {
 
   const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
   const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
-  const REDIRECT_URI = "https://network-spotify-backend.onrender.com/auth/callback";
+  const REDIRECT_URI =
+    "https://network-spotify-backend.onrender.com/auth/callback";
 
   if (error) {
     return res.status(400).json({ message: "Authorization failed" });
@@ -160,7 +162,6 @@ router.get("/refresh-token/:id/:refreshToken", async (req, res) => {
   const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
   const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
   try {
-
     const body = await fetch("https://accounts.spotify.com/api/token", {
       method: "POST",
       headers: {
@@ -183,15 +184,6 @@ router.get("/refresh-token/:id/:refreshToken", async (req, res) => {
     if (accessTokenInsertionError) {
       return res.status(400).json({ message: "Failed to Insert Access Token" });
     }
-    if (response.refresh_token) {
-      const { error: refreshTokenInsertionError } = await supabase
-        .from("users")
-        .update({ refresh_token: await encryptToken(response.refresh_token) })
-        .eq("id", id);
-      if (refreshTokenInsertionError) {
-        return res.status(400).json({ message: "Failed to Insert Refresh" });
-      }
-    }
 
     return res.status(200).json({ message: "Refreshed" });
   } catch (err) {
@@ -207,11 +199,15 @@ router.get("/get-user-data", verifyToken, async (req, res) => {
       .select("major, year, interests, lastName, firstName")
       .eq("id", userId);
     if (userDataError) {
-      return res.status(400).json({ message: "Failed to Authorize", success: false });
+      return res
+        .status(400)
+        .json({ message: "Failed to Authorize", success: false });
     }
     return res.status(200).json({ data: userData, success: true });
   } catch {
-    return res.status(500).json({ message: "Internal Server Error", success: true });
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", success: true });
   }
 });
 

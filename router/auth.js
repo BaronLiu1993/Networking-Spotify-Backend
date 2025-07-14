@@ -77,6 +77,28 @@ router.post("/register", async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 });
+router.delete("/delete-account", verifyToken, async (req, res) => {
+  const { userId } = req.user
+
+  if (!userId) {
+    return res.status(400).json({ message: "Missing userId" });
+  }
+
+  try {
+    const { error: deletionError } = await supabase
+      .from("users")
+      .delete()
+      .eq("userId", userId);
+
+    if (deletionError) {
+      return res.status(400).json({ message: "Failed to delete" });
+    }
+
+    return res.status(200).json({ message: "Deleted successfully" });
+  } catch (err) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 router.get("/oauth2/sync/:id", (req, res) => {
   const { id } = req.params;
@@ -189,7 +211,6 @@ router.get("/refresh-token/:id", async (req, res) => {
     if (accessTokenInsertionError) {
       return res.status(400).json({ message: "Failed to Insert Access Token" });
     }
-
     return res.status(200).json({ message: "Refreshed" });
   } catch (err) {
     return res.status(500).json({ message: "Internal Server Error" });

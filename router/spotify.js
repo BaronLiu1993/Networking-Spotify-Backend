@@ -124,9 +124,6 @@ router.post("/create/shared-playlists", async (req, res) => {
 
     //Follow the Playlist
     const createPlaylistResponse = await rawCreatePlaylistResponse;
-    // Fetch top tracks for both users
-    await followPlaylist(accessToken2, createPlaylistResponse.id);
-
     const [user1TracksData, user2TracksData] = await Promise.all([
       fetch(
         "https://api.spotify.com/v1/me/top/tracks?time_range=medium_term&limit=10",

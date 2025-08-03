@@ -171,7 +171,7 @@ router.get("/callback", async (req, res) => {
       return res.status(400).json({ message: "Failed to Insert" });
     }
 
-    res.redirect("http://localhost:3000");
+    res.redirect("https://indie-b-sides-frontend.vercel.app/login");
   } catch (err) {
     res.status(500).json({ message: "OAuth flow failed" });
   }

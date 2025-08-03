@@ -27,8 +27,6 @@ router.post("/get-scan", async (req, res) => {
   const { messageId, ownerId } = req.body;
   try {
     const response = await getRedirectData(messageId, ownerId);
-    console.log(response);
-
     if (!response.success) {
       return res
         .status(200)
@@ -216,9 +214,6 @@ router.post("/analyse", async (req, res) => {
       getUserProfile(accessToken2),
     ]);
 
-    console.log(userData1);
-    console.log(userData2);
-
     const [spotifyVector1, spotifyVector2] = await Promise.all([
       vectoriseProfileData(accessToken1),
       vectoriseProfileData(accessToken2),
@@ -266,8 +261,7 @@ router.post("/analyse", async (req, res) => {
     };
     return res.status(200).json({ data });
   } catch (err) {
-    console.log(err);
-    return res.status(500).json({ message: err });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 });
 

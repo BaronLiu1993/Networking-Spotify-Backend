@@ -28,8 +28,6 @@ export async function getRedirectData(messageId) {
     .select("ownerId, scannerId")
     .eq("messageId", messageId)
     .single();
-  console.log(fetchError)
-  console.log(userData)
   if (fetchError) {
     return { message: "Failed to Fetch", success: false };
   }

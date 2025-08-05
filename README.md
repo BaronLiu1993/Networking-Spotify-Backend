@@ -8,6 +8,10 @@ This API handles:
 - Determining how "Underground" your music taste is 
 - Automatically creating shared playlists and following users on Spotify
 
+## Motivation
+
+I believe music is one of the most powerful icebreakers in social settings. I wanted to create something that could meaningfully connect people through both their shared and contrasting music tastes. Being someone who loves listening to music, I wanted to build stronger communities and help people make more meaningful connections.
+
 ## Core Features
 
 - 🎵 **Spotify Integration**  
@@ -30,23 +34,10 @@ This API handles:
 
 ---
 
-## 🛠 Tech Stack
-
-| Layer | Tools |
-|-------|-------|
-| **Auth** | Spotify OAuth 2.0 |
-| **Encryption** | `crypto`, `scrypt` |
-| **Backend** | Express.js |
-| **Database** | Supabase (PostgreSQL) |
-| **Similarity Analysis** | `compute-cosine-similarity`, OpenAI Embeddings |
-| **QR Codes** | Custom generation endpoint (external client support) |
-
----
-
 ## 🧠 How Matching Works
 
-1. Each user's top artists are fetched from Spotify  
-2. Genres are extracted → vectorized into an OpenAI embedding  
+1. Each user's top artists and tracks are fetched from Spotify  
+2. Genres are extracted from API → vectorized into an OpenAI embedding  
 3. Cosine similarity is computed to get a compatibility score  
 4. Shared interests and differences are used to generate icebreakers and playlists
 

@@ -1,19 +1,14 @@
-# 🎧 UofT Networking with Spotify API
-
-## 🌐 What This API Does
+# Networking with Spotify API
 
 This API handles:
-
 - Spotify OAuth 2.0 login + token encryption/decryption  
-- Secure user registration and Supabase integration  
 - Generating QR codes to connect instantly  
 - Fetching and analyzing top tracks & artists  
-- Calculating cosine similarity between music preferences  
+- Calculating cosine similarity between music preferences
+- Determining how "Underground" your music taste is 
 - Automatically creating shared playlists and following users on Spotify
 
----
-
-## 🔑 Core Features
+## Core Features
 
 - 🎵 **Spotify Integration**  
   Secure login and personalized data access (top artists, tracks, genres)
